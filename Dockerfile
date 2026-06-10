@@ -10,5 +10,6 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install --omit=dev
 COPY --from=build /app/dist ./dist
+COPY public ./public
 EXPOSE 4500
 CMD ["node", "dist/server.js"]

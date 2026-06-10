@@ -1,7 +1,4 @@
-import {
-  NOTIFY_CHANNEL, PUBLIC_URL,
-  TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, KAKAO_ACCESS_TOKEN,
-} from './config.js';
+import { NOTIFY_CHANNEL, PUBLIC_URL, KAKAO_ACCESS_TOKEN } from './config.js';
 import type { Task } from './approvals.js';
 
 export interface Notifier {
@@ -11,56 +8,30 @@ export interface Notifier {
   info(text: string): Promise<void>;
 }
 
-// ── Telegram (two-way via inline buttons + webhook) ──────────────
-class TelegramNotifier implements Notifier {
+// ── Console (default) ────────────────────────────────────────────
+// 실제 카카오톡 승인은 Claude(자율 개발 루프)가 PlayMCP 로 발송/수신한다.
+// Node 서비스는 작업 원장(ledger) + 대시보드 역할이 기본.
+class ConsoleNotifier implements Notifier {
   async proposeTask(task: Task): Promise<void> {
-    const text = `🛠 *다음 작업 진행할까요?*\n\n*${task.title}*\n${task.detail ?? ''}\n\n\`#${task.id}\``;
-    await this.api('sendMessage', {
-      chat_id: TELEGRAM_CHAT_ID,
-      text,
-      parse_mode: 'Markdown',
-      reply_markup: {
-        inline_keyboard: [[
-          { text: '✅ 진행', callback_data: `approve:${task.id}` },
-          { text: '⛔️ 중단', callback_data: `decline:${task.id}` },
-        ]],
-      },
-    });
+    console.log(`[task ${task.id}] 제안: ${task.title} — 승인: ${PUBLIC_URL}/api/tasks/${task.id}/approve`);
   }
-
   async info(text: string): Promise<void> {
-    await this.api('sendMessage', { chat_id: TELEGRAM_CHAT_ID, text });
-  }
-
-  private async api(method: string, body: unknown): Promise<void> {
-    const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/${method}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (!res.ok) console.error('[telegram]', res.status, await res.text());
+    console.log(`[info] ${text}`);
   }
 }
 
-// ── Kakao "나에게 보내기" (outbound only; approve via link) ───────
+// ── Kakao "나에게 보내기" (옵션, 스탠드얼론) ──────────────────────
 class KakaoNotifier implements Notifier {
   async proposeTask(task: Task): Promise<void> {
     const approve = `${PUBLIC_URL}/api/tasks/${task.id}/approve`;
     const decline = `${PUBLIC_URL}/api/tasks/${task.id}/decline`;
-    const text = `🛠 다음 작업 진행할까요?\n\n${task.title}\n${task.detail ?? ''}\n\n▶ 진행: ${approve}\n■ 중단: ${decline}`;
-    await this.sendText(text, approve);
+    await this.sendText(`🛠 다음 작업 진행할까요?\n\n${task.title}\n${task.detail ?? ''}\n\n▶ 진행: ${approve}\n■ 중단: ${decline}`, approve);
   }
-
   async info(text: string): Promise<void> {
     await this.sendText(text, PUBLIC_URL);
   }
-
   private async sendText(text: string, link: string): Promise<void> {
-    const templateObject = {
-      object_type: 'text',
-      text,
-      link: { web_url: link, mobile_web_url: link },
-    };
+    const templateObject = { object_type: 'text', text, link: { web_url: link, mobile_web_url: link } };
     const res = await fetch('https://kapi.kakao.com/v2/api/talk/memo/default/send', {
       method: 'POST',
       headers: {
@@ -74,4 +45,4 @@ class KakaoNotifier implements Notifier {
 }
 
 export const notifier: Notifier =
-  NOTIFY_CHANNEL === 'kakao' ? new KakaoNotifier() : new TelegramNotifier();
+  NOTIFY_CHANNEL === 'kakao' ? new KakaoNotifier() : new ConsoleNotifier();

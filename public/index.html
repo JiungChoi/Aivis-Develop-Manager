@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AIVIS · 개발 현황</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="paper">
+    <header class="masthead">
+      <div class="kicker">AIVIS DEVELOP MANAGER · 뉴스레터</div>
+      <h1>오늘의 개발 현황</h1>
+      <div class="byline">자율 개발 진행 상황과 내가 결정할 것들 · <span id="genDate">—</span></div>
+    </header>
+
+    <nav class="tabs" id="tabs">
+      <a href="#/overview" data-tab="overview">개요</a>
+      <a href="#/requests" data-tab="requests">요청·자격증명</a>
+      <a href="#/projects" data-tab="projects">프로젝트</a>
+      <a href="#/activity" data-tab="activity">진행 로그</a>
+      <a href="#/approvals" data-tab="approvals">승인</a>
+    </nav>
+
+    <main id="view"><div class="loading">불러오는 중…</div></main>
+
+    <footer class="foot">
+      <span>AIVIS Develop Manager</span>
+      <span>승인은 카카오톡(PlayMCP)으로 처리됩니다</span>
+    </footer>
+  </div>
+  <script src="/app.js"></script>
+</body>
+</html>

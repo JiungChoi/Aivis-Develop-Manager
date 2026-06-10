@@ -1,10 +1,28 @@
 import express, { type Request, type Response } from 'express';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import { PORT } from './config.js';
 import { approvals, type Decision } from './approvals.js';
 import { notifier } from './notifier.js';
+import { credentials, projects, activity } from './board.js';
 
 const app = express();
 app.use(express.json());
+
+// ── Static newsletter dashboard (public/) ───────────────────────
+const publicDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'public');
+app.use(express.static(publicDir));
+
+// Aggregated board data for the dashboard.
+app.get('/api/board', (_req: Request, res: Response) => {
+  res.json({
+    credentials,
+    projects,
+    activity,
+    approvals: approvals.list(),
+    generatedAt: new Date().toISOString(),
+  });
+});
 
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -52,16 +70,4 @@ function decideViaLink(decision: Exclude<Decision, 'pending'>) {
 app.get('/api/tasks/:id/approve', decideViaLink('approved'));
 app.get('/api/tasks/:id/decline', decideViaLink('declined'));
 
-// Telegram inline-button callbacks.
-app.post('/webhook/telegram', (req: Request, res: Response) => {
-  const data = req.body?.callback_query?.data as string | undefined;
-  if (data) {
-    const [action, id] = data.split(':');
-    if (id && (action === 'approve' || action === 'decline')) {
-      approvals.resolve(id, action === 'approve' ? 'approved' : 'declined');
-    }
-  }
-  res.sendStatus(200);
-});
-
-app.listen(PORT, () => console.log(`aivis-manager listening on :${PORT}`));
+app.listen(PORT, () => console.log(`aivis-manager listening on :${PORT} (dashboard: ${'/'})`));

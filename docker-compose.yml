@@ -1,0 +1,13 @@
+services:
+  manager:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aivis-develop-manager
+    ports:
+      - "4500:4500"
+    env_file:
+      - .env
+    environment:
+      PORT: "4500"
+    restart: unless-stopped

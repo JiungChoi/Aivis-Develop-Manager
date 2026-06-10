@@ -1,0 +1,19 @@
+{
+  "name": "aivis-manager",
+  "version": "0.1.0",
+  "description": "Approval & notification manager for AIVIS autonomous development",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "tsc && node --watch dist/server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.14.0"
+  }
+}

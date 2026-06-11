@@ -1,6 +1,6 @@
 const STATUS_LABEL = {
-  done: '해결완료', progress: '진행중', waiting: '대기',
-  blocked: '막힘', cancelled: '취소',
+  done: '완료', progress: '진행 중', waiting: '대기',
+  blocked: '막힘', cancelled: '미사용',
 };
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const badge = (status) => `<span class="badge b-${status}">${STATUS_LABEL[status] ?? status}</span>`;
@@ -21,14 +21,14 @@ const views = {
     const count = (s) => allItems.filter((i) => i.status === s).length;
     const pending = BOARD.approvals.filter((a) => a.decision === 'pending').length;
     return `
-      <p class="lead">자율 개발이 백그라운드로 진행되고 있어요. 내가 결정·입력해야 할 것들과 그동안의 진행 상황을 한눈에 정리했습니다.</p>
+      <p class="lead">자율 개발이 백그라운드에서 진행 중입니다. 내가 결정하거나 입력해야 할 것과 지금까지의 진행 상황을 한눈에 정리했습니다.</p>
       <div class="tiles">
         <div class="tile"><div class="n">${count('done')}</div><div class="l">완료</div></div>
         <div class="tile"><div class="n">${count('progress')}</div><div class="l">진행중</div></div>
         <div class="tile"><div class="n">${count('waiting')}</div><div class="l">대기</div></div>
         <div class="tile"><div class="n">${pending}</div><div class="l">승인 대기</div></div>
       </div>
-      <h2 class="section">지금 내가 할 것</h2>
+      <h2 class="section">지금 내가 결정·입력할 것</h2>
       <div class="card">
         ${BOARD.credentials.items.filter((i) => i.status === 'waiting').map(itemRow).join('') || '<div class="empty">대기 중인 항목이 없습니다 🎉</div>'}
       </div>

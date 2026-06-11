@@ -29,14 +29,14 @@ export interface ActivityEntry {
 
 export const credentials: BoardSection = {
   id: 'credentials',
-  title: '자격증명 · 입력 현황',
+  title: '내가 입력·결정할 것',
   items: [
-    { title: 'Aivis-Develop-Manager 원격 레포', status: 'done', note: '생성 + main/develop push 완료' },
-    { title: 'GitHub 레포 자동생성 권한', status: 'cancelled', note: '미부여 — 사용자가 직접 생성·전달' },
-    { title: '텔레그램 봇', status: 'cancelled', note: '미사용 — 승인은 카카오톡으로' },
-    { title: '카카오톡 승인 (PlayMCP)', status: 'waiting', note: 'PlayMCP 인증 필요(브라우저 OAuth)' },
-    { title: 'PR 생성 권한 (gh/토큰)', status: 'waiting', note: 'feature→develop은 PR. 현재 브랜치만 push' },
-    { title: '공개 URL (ngrok 등)', status: 'waiting', note: '폰에서 대시보드/승인 접근 시' },
+    { title: 'Aivis-Develop-Manager 원격 레포', status: 'done', note: '레포 생성 + main/develop 올림 완료' },
+    { title: 'GitHub 레포 자동 생성 권한', status: 'cancelled', note: '권한 미부여 — 레포는 직접 만들어 전달받기로' },
+    { title: '텔레그램 봇', status: 'cancelled', note: '사용 안 함 — 승인은 카카오톡으로' },
+    { title: '카카오톡 승인 (PlayMCP)', status: 'progress', note: '연결 완료 · 승인 연동은 잠시 보류 중' },
+    { title: 'PR 생성 권한 (gh/토큰)', status: 'waiting', note: 'feature를 develop에 합칠 때 PR 필요 — 지금은 브랜치만 올려둠' },
+    { title: '공개 URL (ngrok 등)', status: 'waiting', note: '폰에서 대시보드·승인에 접근할 때 필요' },
   ],
 };
 

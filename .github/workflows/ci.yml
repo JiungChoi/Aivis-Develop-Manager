@@ -1,0 +1,23 @@
+name: CI
+
+# git-flow: develop/main 으로의 PR 과 develop push 에서 빌드 검증 (머지 전 통과 강제).
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [develop]
+
+jobs:
+  build:
+    name: Build (tsc)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npm run build
+      # 테스트 추가되면 아래 활성화
+      # - run: npm test

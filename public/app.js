@@ -80,15 +80,23 @@ function render() {
   document.getElementById('view').innerHTML = view();
 }
 
+async function load() {
+  const res = await fetch('/api/board');
+  BOARD = await res.json();
+  document.getElementById('genDate').textContent =
+    new Date(BOARD.generatedAt).toLocaleString('ko-KR') + ' · 15초마다 자동 새로고침';
+  render();
+}
+
 async function boot() {
   try {
-    const res = await fetch('/api/board');
-    BOARD = await res.json();
-    document.getElementById('genDate').textContent = new Date(BOARD.generatedAt).toLocaleString('ko-KR');
-    render();
-  } catch (e) {
+    await load();
+  } catch {
     document.getElementById('view').innerHTML = `<div class="empty">데이터를 불러오지 못했습니다.</div>`;
+    return;
   }
+  // Keep the board live without a manual refresh.
+  setInterval(() => { load().catch(() => {}); }, 15000);
 }
 
 window.addEventListener('hashchange', render);

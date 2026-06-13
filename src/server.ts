@@ -4,10 +4,18 @@ import { dirname, join } from 'node:path';
 import { PORT } from './config.js';
 import { approvals, type Decision } from './approvals.js';
 import { notifier } from './notifier.js';
+import { events } from './events.js';
 import { credentials, projects, activity } from './board.js';
 
 const app = express();
 app.use(express.json());
+
+// Allow the desktop pet (file:// origin) to call the API.
+app.use((_req: Request, res: Response, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  next();
+});
 
 // ── Static newsletter dashboard (public/) ───────────────────────
 const publicDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'public');
@@ -25,8 +33,11 @@ app.get('/api/board', (_req: Request, res: Response) => {
 });
 
 app.get('/health', (_req: Request, res: Response) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), sseClients: events.clientCount() });
 });
+
+// Live event stream for desktop clients (dino pet).
+app.get('/api/events', events.handler);
 
 // Dev process proposes the next task → notify user, create pending approval.
 app.post('/api/tasks', async (req: Request, res: Response) => {
@@ -36,6 +47,7 @@ app.post('/api/tasks', async (req: Request, res: Response) => {
     return;
   }
   const task = approvals.create(title, detail);
+  events.emit('task:proposed', task);
   try {
     await notifier.proposeTask(task);
   } catch (err) {
@@ -54,7 +66,23 @@ app.get('/api/tasks/:id', (req: Request, res: Response) => {
   res.json(task);
 });
 
-// Approve / decline via link (used by Kakao outbound).
+// Dev process reports progress → broadcast to pet + push notification.
+app.post('/api/info', async (req: Request, res: Response) => {
+  const { text } = req.body ?? {};
+  if (!text || typeof text !== 'string') {
+    res.status(400).json({ error: 'text (string) required' });
+    return;
+  }
+  events.emit('info', { text, at: new Date().toISOString() });
+  try {
+    await notifier.info(text);
+  } catch (err) {
+    console.error('notify failed', err);
+  }
+  res.json({ ok: true });
+});
+
+// Approve / decline via link (Kakao message) or the desktop pet.
 function decideViaLink(decision: Exclude<Decision, 'pending'>) {
   return (req: Request, res: Response) => {
     const task = approvals.resolve(req.params.id, decision);
@@ -62,6 +90,7 @@ function decideViaLink(decision: Exclude<Decision, 'pending'>) {
       res.status(404).send('not found');
       return;
     }
+    events.emit('task:decided', task);
     const label = decision === 'approved' ? '진행' : '중단';
     res.send(`<!doctype html><meta charset="utf-8"><body style="font-family:system-ui;background:#0b0b12;color:#eee;text-align:center;padding-top:60px">
       <h2>✅ ${label} 처리됨</h2><p>${task.title}</p></body>`);

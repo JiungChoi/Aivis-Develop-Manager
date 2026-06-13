@@ -1,0 +1,12 @@
+{
+  "name": "aivis-dino",
+  "version": "0.1.0",
+  "description": "Pixel dino desktop pet for the AIVIS dev manager",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "electron": "^33.0.0"
+  }
+}

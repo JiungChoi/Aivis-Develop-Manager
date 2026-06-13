@@ -1,49 +1,61 @@
 # AIVIS Manager
 
-아이비스(AIVIS) 자율 개발을 위한 **승인·알림 매니저 서비스**.
-개발 프로세스(Claude/CI)가 "다음 작업 진행할까요?"를 제안하면, **폰 메신저로 알림**을 보내고
-사용자가 **진행/중단**을 답하면 그 결정을 개발 프로세스가 받아 이어가거나 멈춘다.
+아이비스(AIVIS) 자율 개발을 위한 **승인·알림 매니저 + 주기 개발 루프 + 공룡 데스크톱 펫**.
+주기 루프가 백로그에서 다음 작업을 고르면 → **공룡 펫이 말풍선으로 말 걸고 / 카톡으로 알림** →
+사용자가 **진행/중단**을 답하면 그 결정을 받아 git-flow로 작업을 수행하거나 멈춘다.
 
 > AIVIS 본체와 **별도 레포 · 별도 컨테이너**로 동작한다.
 
 ## 동작 흐름
 ```
-[개발 프로세스] --POST /api/tasks--> [Manager] --알림(텔레그램/카카오)--> [내 폰]
-                                          ▲                                  |
-       GET /api/tasks/:id (폴링) ─────────┘        진행/중단 탭 ─────────────┘
+[launchd 매시간] ─ dev-loop.sh ─ claude -p(헤드리스)
+    │ REQUESTS.md/백로그 분석 → 다음 작업 1건
+    ├ POST /api/tasks ─────────────────┐
+    ├ GET /api/tasks/:id (폴링, 최대 30분) │
+    └ 승인 시 git-flow로 수행            ▼
+                              [Manager :4500]
+                                ├ 카카오 "나에게 보내기" + 진행/중단 링크 (cloudflared 터널)
+                                └ GET /api/events (SSE) ─→ [공룡 펫(Electron)]
+                                                            말풍선 + [진행]/[중단] 버튼
 ```
 
-## 메신저 채널 (NOTIFY_CHANNEL)
-- `telegram` (기본, **양방향**): 봇 인라인 버튼 ✅진행 / ⛔️중단 → 즉시 결정.
-- `kakao` (**아웃바운드만**): 카카오 "나에게 보내기"로 메시지 + 진행/중단 **링크**.
-  - 카카오는 개인용 1:1 봇 수신 API가 없어, 승인은 링크 클릭(매니저 공개 URL)로 처리.
-  - 양방향까지 원하면 카카오 비즈니스 채널+챗봇(심사 필요)을 추후 연동.
+## 구성 요소
+1. **매니저 서비스** (`src/`) — Express. 승인 원장 + SSE 브로드캐스트 + 카카오 알림.
+2. **공룡 펫** (`desktop/`) — Electron 투명·최상위 창. SSE 구독해 제안/진행/완료를 말풍선으로 표시, 버튼으로 즉시 결정.
+3. **주기 루프** (`scripts/`) — launchd가 매시간 헤드리스 Claude를 실행, 승인 게이트를 거쳐 작업 수행.
 
 ## 셋업
 ```bash
-cp .env.example .env   # 토큰 채우기
-npm install
-npm run build && npm start
+# 1) 매니저
+cp .env.example .env        # (선택) 카카오 토큰 채우기
+npm install && npm run build && npm start   # :4500
+
+# 2) 공룡 펫
+cd desktop && npm install && npm start
+
+# 3) 주기 개발 루프 (매시간)
+bash scripts/install-launchd.sh             # 해제: launchctl unload ~/Library/LaunchAgents/com.aivis.dev-loop.plist
+
+# 4) (선택) 폰에서 카톡 승인 링크 열기
+brew install cloudflared && bash scripts/tunnel.sh   # 발급 URL을 .env PUBLIC_URL에 기입
 ```
 
-### 텔레그램(권장) 5분 셋업
-1. @BotFather 에서 봇 생성 → `TELEGRAM_BOT_TOKEN`
-2. 봇과 대화 시작 후, `https://api.telegram.org/bot<TOKEN>/getUpdates` 로 내 `chat.id` 확인 → `TELEGRAM_CHAT_ID`
-3. 공개 URL(예: ngrok/cloudflared)로 webhook 등록:
-   `curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=<PUBLIC_URL>/webhook/telegram"`
-
-### 카카오(나에게 보내기)
-1. Kakao Developers 앱 생성 → REST 키, 카카오 로그인 동의항목 `talk_message`
-2. OAuth로 access token 발급 → `KAKAO_ACCESS_TOKEN` (refresh 갱신 필요)
+## 알림 채널 (NOTIFY_CHANNEL)
+- `console` (기본): 로그만.
+- `kakao`: 카카오 "나에게 보내기"로 메시지 + 진행/중단 **링크**. 개인 1:1 수신 API가 없어 승인은 링크 클릭.
+  - `KAKAO_REST_API_KEY` + `KAKAO_REFRESH_TOKEN`을 채우면 access token 만료(401) 시 자동 갱신.
 
 ## API
 | 메서드 | 경로 | 설명 |
 |---|---|---|
-| POST | `/api/tasks` | `{title, detail}` 작업 제안 → 알림 발송, pending 생성 |
-| GET | `/api/tasks/:id` | 결정 상태 조회 (pending/approved/declined) — 개발 프로세스가 폴링 |
-| GET | `/api/tasks/:id/approve` \| `/decline` | 링크 승인(카카오용) |
-| POST | `/webhook/telegram` | 텔레그램 인라인 버튼 콜백 |
-| GET | `/health` | 헬스체크 |
+| POST | `/api/tasks` | `{title, detail}` 작업 제안 → 알림 + SSE, pending 생성 |
+| GET | `/api/tasks/:id` | 결정 상태 조회 (pending/approved/declined) — 루프가 폴링 |
+| GET | `/api/tasks/:id/approve` \| `/decline` | 링크/펫 승인 → SSE 브로드캐스트 |
+| POST | `/api/info` | `{text}` 진행상황 보고 → 알림 + SSE |
+| GET | `/api/events` | SSE 스트림(공룡 펫 구독) |
+| GET | `/api/board` | 대시보드 집계 데이터 |
+| GET | `/health` | 헬스체크(SSE 클라이언트 수 포함) |
 
 ## 개발 규칙
 git-flow 준수 (main/develop/feature). 자세한 내용은 [CLAUDE.md](CLAUDE.md).
+계획 문서: [documents/autonomous-loop-plan.md](documents/autonomous-loop-plan.md).

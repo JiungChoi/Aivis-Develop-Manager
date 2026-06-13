@@ -12,8 +12,11 @@ async function git(repoPath: string, args: string[]): Promise<string> {
   return stdout.trim();
 }
 
+/** The slice of RepoStatus that comes from the local git clone. */
+export type GitStatus = Omit<RepoStatus, 'openPRs' | 'ci'>;
+
 /** Read live branch/commit state from a local clone via the git CLI (no deps). */
-export async function collectGit(name: string, slug: string, repoPath: string): Promise<RepoStatus> {
+export async function collectGit(name: string, slug: string, repoPath: string): Promise<GitStatus> {
   const [currentBranch, branchesRaw, logRaw, aheadRaw] = await Promise.all([
     git(repoPath, ['rev-parse', '--abbrev-ref', 'HEAD']),
     git(repoPath, ['branch', '--format=%(refname:short)']),

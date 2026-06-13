@@ -46,6 +46,12 @@ h2.section:first-child { margin-top: 4px; }
 .gitmeta { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .gb { font-size: 12px; font-family: ui-monospace, monospace; color: var(--muted); background: rgba(255,255,255,0.05); border: 1px solid var(--line); padding: 3px 9px; border-radius: 999px; }
 .gb.warn { color: #fcd34d; background: rgba(251,191,36,0.12); border-color: rgba(251,191,36,0.25); }
+.gb.ci-passing { color: #4ade80; background: rgba(52,211,153,0.12); border-color: rgba(52,211,153,0.25); }
+.gb.ci-failing { color: #fca5a5; background: rgba(248,113,113,0.12); border-color: rgba(248,113,113,0.25); }
+.gb.ci-pending { color: #67d8ff; background: rgba(54,211,255,0.12); border-color: rgba(54,211,255,0.25); }
+.prs { list-style: none; padding: 0; margin: 0 0 8px; }
+.prs li { font-size: 13.5px; padding: 3px 0; display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.prs .prnum { color: var(--accent); font-family: ui-monospace, monospace; font-size: 12.5px; flex-shrink: 0; }
 .commits { list-style: none; padding: 0; margin: 0; }
 .commits li { font-size: 13.5px; padding: 3px 0; color: var(--ink); display: flex; gap: 8px; align-items: baseline; }
 .commits code { color: var(--accent); font-family: ui-monospace, monospace; font-size: 12.5px; flex-shrink: 0; }

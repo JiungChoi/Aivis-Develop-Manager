@@ -10,6 +10,7 @@ import { triggerExecution } from './runner.js';
 import { credentials, projects, activity } from './board.js';
 import { collectGit } from './collectors/git.js';
 import { collectGithub } from './collectors/github.js';
+import { parseRequests } from './collectors/requests.js';
 import { createCache } from './cache.js';
 import type { RepoStatus } from './types.js';
 
@@ -30,6 +31,9 @@ const reposCache = createCache(
     ]),
   60_000,
 );
+
+// REQUESTS.md is the human-maintained board (one level above the manager repo).
+const requestsCache = createCache(() => parseRequests(join(DEV_DIR, 'REQUESTS.md')), 60_000);
 
 const app = express();
 app.use(express.json());
@@ -57,14 +61,20 @@ app.use(express.static(publicDir));
 
 // Aggregated board data for the dashboard.
 app.get('/api/board', async (_req: Request, res: Response) => {
-  const repos = await reposCache.get();
+  const [repos, reqs] = await Promise.all([reposCache.get(), requestsCache.get()]);
+  // Prefer live REQUESTS.md data; fall back to the seed in board.ts on failure.
+  const liveCredentials = reqs.value?.credentials.length ? { ...credentials, items: reqs.value.credentials } : credentials;
+  const liveActivity = reqs.value?.activity.length ? reqs.value.activity : activity;
   res.json({
-    credentials,
+    credentials: liveCredentials,
     projects,
-    activity,
+    activity: liveActivity,
     approvals: approvals.list().map(withUrls),
     repos: repos.value ?? [],
-    sources: { git: { status: repos.status, at: repos.at, error: repos.error } },
+    sources: {
+      git: { status: repos.status, at: repos.at, error: repos.error },
+      requests: { status: reqs.status, at: reqs.at, error: reqs.error },
+    },
     generatedAt: new Date().toISOString(),
   });
 });

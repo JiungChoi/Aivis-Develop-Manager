@@ -11,7 +11,7 @@
 이번 작업으로 다음 세 가지를 완성한다:
 1. **주기 개발 루프** — launchd가 매시간 `claude -p`(헤드리스)를 실행, REQUESTS.md/백로그에서 다음 작업 1건을 골라 매니저에 승인 요청 → 승인 시 그 자리에서 git-flow로 수행.
 2. **픽셀 공룡 데스크톱 펫** — Electron 투명·최상위 창. 매니저 SSE를 구독해 제안/진행/완료를 말풍선으로 말 걸고, 말풍선에서 바로 진행/중단 결정 가능.
-3. **카카오 원격 승인** — 매니저의 "나에게 보내기" + 진행/중단 링크. cloudflared 터널로 매니저를 외부 노출, 액세스 토큰 자동 갱신(refresh token) 추가.
+3. **카카오 원격 승인** — 헤드리스 Claude가 **PlayMCP "나에게 보내기"**로 발송(REST 미사용). 매니저는 진행/중단 링크만 제공하고 cloudflared 터널로 외부 노출.
 
 ## 2. 아키텍처
 ```
@@ -41,11 +41,12 @@
 - [ ] SSE 구독(자동 재접속): 제안 도착 → 말풍선 + [진행]/[중단] 버튼(매니저 API 호출), info → 말풍선 표시.
 - [ ] 매니저 미접속 시 "매니저가 안 떠있어요" 상태 표시.
 
-### C. 주기 개발 루프 (scripts/)
-- [ ] `dev-loop-prompt.md`: 헤드리스 Claude 지시문(작업 1건 선정 → 승인 게이트 → git-flow 수행 → 결과 보고).
-- [ ] `dev-loop.sh`: 매니저 health 확인 → `claude -p` 실행(허용 도구 제한) → 로그 적재.
-- [ ] `com.aivis.dev-loop.plist` + `install-launchd.sh`: 매 3600초 실행, 로그 `~/Library/Logs/aivis-dev-loop.log`.
-- [ ] `tunnel.sh`: cloudflared quick tunnel 기동 + PUBLIC_URL 안내.
+### C. 상시 스케줄러 (scripts/) — 죽지 않고 계속 돈다
+- [x] `dev-loop-prompt.md`: 헤드리스 Claude 지시문(작업 1건 선정 → 승인 게이트 → git-flow 수행 → 결과 보고). 카카오 알림은 **PlayMCP**로(REST 아님).
+- [x] `dev-loop.sh`: 한 사이클 — 매니저 health 확인 → `claude -p` 실행(허용 도구 제한) → 로그 적재.
+- [x] `scheduler.sh`: **무한 루프**로 `DEV_LOOP_INTERVAL`마다 한 사이클 실행 → launchd가 이 프로세스를 상시 살려둠.
+- [x] `com.aivis.dev-loop.plist`(**KeepAlive**) + `install-launchd.sh`: 상시 구동, 종료 시 자동 재기동, 로그 `~/Library/Logs/aivis-dev-loop.log`.
+- [x] `tunnel.sh`: cloudflared quick tunnel 기동 + PUBLIC_URL 안내.
 
 ### D. 문서/마무리
 - [ ] README 갱신(셋업 절차), REQUESTS.md 현황 갱신.

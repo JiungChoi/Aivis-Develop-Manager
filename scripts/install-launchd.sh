@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install (or reinstall) the hourly dev-loop launchd agent.
+# Install (or reinstall) the always-on dev-loop scheduler (launchd KeepAlive).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -11,5 +11,6 @@ sed -e "s|__ROOT__|$ROOT|g" -e "s|__HOME__|$HOME|g" "$PLIST_SRC" > "$PLIST_DST"
 
 launchctl unload "$PLIST_DST" 2>/dev/null || true
 launchctl load "$PLIST_DST"
-echo "installed: $PLIST_DST (every 3600s, log: ~/Library/Logs/aivis-dev-loop.log)"
+echo "installed: $PLIST_DST (상시 데몬, log: ~/Library/Logs/aivis-dev-loop.log)"
+echo "status:    launchctl list | grep aivis"
 echo "disable:   launchctl unload $PLIST_DST"

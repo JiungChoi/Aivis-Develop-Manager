@@ -8,21 +8,22 @@
 
 ## 동작 흐름
 ```
-[launchd 매시간] ─ dev-loop.sh ─ claude -p(헤드리스)
-    │ REQUESTS.md/백로그 분석 → 다음 작업 1건
-    ├ POST /api/tasks ─────────────────┐
-    ├ GET /api/tasks/:id (폴링, 최대 30분) │
-    └ 승인 시 git-flow로 수행            ▼
-                              [Manager :4500]
-                                ├ 카카오 "나에게 보내기" + 진행/중단 링크 (cloudflared 터널)
-                                └ GET /api/events (SSE) ─→ [공룡 펫(Electron)]
-                                                            말풍선 + [진행]/[중단] 버튼
+[launchd KeepAlive] ─ scheduler.sh (상시 구동, 죽으면 자동 재기동)
+    └ DEV_LOOP_INTERVAL 마다 ─ dev-loop.sh ─ claude -p(헤드리스)
+         │ REQUESTS.md/백로그 분석 → 다음 작업 1건
+         ├ POST /api/tasks ──────────────┐
+         ├ PlayMCP 카카오 "나에게 보내기" + 진행/중단 링크  │  (REST 아님)
+         ├ GET /api/tasks/:id (폴링, 최대 30분)            │
+         └ 승인 시 git-flow로 수행                         ▼
+                                           [Manager :4500]
+                                             └ GET /api/events (SSE) ─→ [공룡 펫(Electron)]
+                                                                          말풍선 + [진행]/[중단] 버튼
 ```
 
 ## 구성 요소
-1. **매니저 서비스** (`src/`) — Express. 승인 원장 + SSE 브로드캐스트 + 카카오 알림.
+1. **매니저 서비스** (`src/`) — Express. 승인 원장 + SSE 브로드캐스트 (카카오 REST 미사용).
 2. **공룡 펫** (`desktop/`) — Electron 투명·최상위 창. SSE 구독해 제안/진행/완료를 말풍선으로 표시, 버튼으로 즉시 결정.
-3. **주기 루프** (`scripts/`) — launchd가 매시간 헤드리스 Claude를 실행, 승인 게이트를 거쳐 작업 수행.
+3. **상시 스케줄러** (`scripts/`) — launchd `KeepAlive` 데몬(`scheduler.sh`)이 죽지 않고 계속 돌며, 주기마다 헤드리스 Claude를 실행해 승인 게이트를 거쳐 작업 수행. 카카오 알림은 Claude가 **PlayMCP**로 발송.
 
 ## 셋업
 ```bash
@@ -33,17 +34,18 @@ npm install && npm run build && npm start   # :4500
 # 2) 공룡 펫
 cd desktop && npm install && npm start
 
-# 3) 주기 개발 루프 (매시간)
-bash scripts/install-launchd.sh             # 해제: launchctl unload ~/Library/LaunchAgents/com.aivis.dev-loop.plist
+# 3) 상시 스케줄러 (죽지 않고 계속 돈다)
+bash scripts/install-launchd.sh             # 상태: launchctl list | grep aivis
+                                            # 해제: launchctl unload ~/Library/LaunchAgents/com.aivis.dev-loop.plist
 
 # 4) (선택) 폰에서 카톡 승인 링크 열기
 brew install cloudflared && bash scripts/tunnel.sh   # 발급 URL을 .env PUBLIC_URL에 기입
 ```
 
-## 알림 채널 (NOTIFY_CHANNEL)
-- `console` (기본): 로그만.
-- `kakao`: 카카오 "나에게 보내기"로 메시지 + 진행/중단 **링크**. 개인 1:1 수신 API가 없어 승인은 링크 클릭.
-  - `KAKAO_REST_API_KEY` + `KAKAO_REFRESH_TOKEN`을 채우면 access token 만료(401) 시 자동 갱신.
+## 카카오 알림 (PlayMCP)
+- 카카오 발송은 **REST가 아니라** 헤드리스 Claude가 **PlayMCP "나에게 보내기"** 도구로 보낸다.
+- 매니저는 토큰을 들고 있지 않는다 — 승인 링크(`/approve`·`/decline`)만 제공하고, 폰에서 열리도록 cloudflared로 공개한다.
+- PlayMCP 발송 도구가 헤드리스 세션에 로드되지 않으면 카톡은 건너뛰고 **공룡 펫(SSE)** 알림만으로 동작한다.
 
 ## API
 | 메서드 | 경로 | 설명 |

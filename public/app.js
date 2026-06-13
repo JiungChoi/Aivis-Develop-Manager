@@ -4,6 +4,27 @@ const STATUS_LABEL = {
 };
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const badge = (status) => `<span class="badge b-${status}">${STATUS_LABEL[status] ?? status}</span>`;
+const relTime = (iso) => {
+  if (!iso) return '';
+  const s = (Date.now() - new Date(iso).getTime()) / 1000;
+  if (s < 60) return '방금';
+  if (s < 3600) return `${Math.floor(s / 60)}분 전`;
+  if (s < 86400) return `${Math.floor(s / 3600)}시간 전`;
+  return `${Math.floor(s / 86400)}일 전`;
+};
+// Live git summary for a repo (from /api/board.repos), matched by slug.
+const gitStrip = (r) => !r ? '' : `
+  <div class="git">
+    <div class="gitmeta">
+      <span class="gb">⎇ ${esc(r.currentBranch)}</span>
+      ${r.developAheadOfMain ? `<span class="gb warn">develop +${r.developAheadOfMain} 미배포</span>` : ''}
+      ${r.featureBranches.length ? `<span class="gb">feature ${r.featureBranches.length}개</span>` : ''}
+    </div>
+    <ul class="commits">
+      ${r.recentCommits.slice(0, 4).map((c) =>
+        `<li><code>${esc(c.sha)}</code> ${esc(c.subject)} <span class="ago">${esc(relTime(c.date))}</span></li>`).join('')}
+    </ul>
+  </div>`;
 const itemRow = (it) => `
   <div class="row">
     <div class="body">
@@ -43,10 +64,12 @@ const views = {
       <div class="card">${BOARD.credentials.items.map(itemRow).join('')}</div>`;
   },
   projects() {
+    const bySlug = Object.fromEntries((BOARD.repos || []).map((r) => [r.slug, r]));
     return `<h2 class="section">프로젝트 현황</h2>` + BOARD.projects.map((p) => `
       <div class="card">
         <div class="ttl">${esc(p.name)} <span class="repo">${esc(p.repo)}</span></div>
         <div class="sum">${esc(p.summary)}</div>
+        ${gitStrip(bySlug[p.repo])}
         <div style="margin-top:10px">${p.items.map(itemRow).join('')}</div>
       </div>`).join('');
   },

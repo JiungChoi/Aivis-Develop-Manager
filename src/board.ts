@@ -1,31 +1,7 @@
-// Seed content for the status dashboard (newsletter). In-memory for now;
-// could be backed by a DB or generated from real project state later.
-
-export type ItemStatus = 'done' | 'waiting' | 'blocked' | 'cancelled' | 'progress';
-
-export interface BoardItem {
-  title: string;
-  status: ItemStatus;
-  note?: string;
-}
-
-export interface BoardSection {
-  id: string;
-  title: string;
-  items: BoardItem[];
-}
-
-export interface ProjectStatus {
-  name: string;
-  repo: string;
-  summary: string;
-  items: BoardItem[];
-}
-
-export interface ActivityEntry {
-  date: string;
-  text: string;
-}
+// Seed content for the status dashboard (newsletter). Live git/PR data is merged
+// in by collectors/ at request time; these remain as fallback / human-curated notes.
+import type { BoardSection, ProjectStatus, ActivityEntry } from './types.js';
+export type { ItemStatus, BoardItem, BoardSection, ProjectStatus, ActivityEntry } from './types.js';
 
 export const credentials: BoardSection = {
   id: 'credentials',

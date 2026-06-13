@@ -1,12 +1,26 @@
 import express, { type Request, type Response } from 'express';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { homedir } from 'node:os';
 import { PORT, PUBLIC_URL, APPROVAL_TOKEN } from './config.js';
 import { approvals, type Decision, type Task } from './approvals.js';
 import { notifier } from './notifier.js';
 import { events } from './events.js';
 import { triggerExecution } from './runner.js';
 import { credentials, projects, activity } from './board.js';
+import { collectGit } from './collectors/git.js';
+import { createCache } from './cache.js';
+
+// Local clones the dashboard reports on. Override the root with DEV_DIR if needed.
+const DEV_DIR = process.env.DEV_DIR ?? join(homedir(), 'development');
+const reposCache = createCache(
+  () =>
+    Promise.all([
+      collectGit('AIVIS', 'JiungChoi/Aivis', join(DEV_DIR, 'Aivis')),
+      collectGit('AIVIS Develop Manager', 'JiungChoi/Aivis-Develop-Manager', join(DEV_DIR, 'Aivis-Develop-Manager')),
+    ]),
+  60_000,
+);
 
 const app = express();
 app.use(express.json());
@@ -33,12 +47,15 @@ const publicDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'public');
 app.use(express.static(publicDir));
 
 // Aggregated board data for the dashboard.
-app.get('/api/board', (_req: Request, res: Response) => {
+app.get('/api/board', async (_req: Request, res: Response) => {
+  const repos = await reposCache.get();
   res.json({
     credentials,
     projects,
     activity,
     approvals: approvals.list().map(withUrls),
+    repos: repos.value ?? [],
+    sources: { git: { status: repos.status, at: repos.at, error: repos.error } },
     generatedAt: new Date().toISOString(),
   });
 });

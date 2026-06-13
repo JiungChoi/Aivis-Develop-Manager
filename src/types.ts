@@ -1,0 +1,53 @@
+// Shared types for the status board. Seed data lives in board.ts; live data
+// is gathered by collectors/ and merged into the /api/board response.
+
+export type ItemStatus = 'done' | 'waiting' | 'blocked' | 'cancelled' | 'progress';
+
+export interface BoardItem {
+  title: string;
+  status: ItemStatus;
+  note?: string;
+}
+
+export interface BoardSection {
+  id: string;
+  title: string;
+  items: BoardItem[];
+}
+
+export interface ProjectStatus {
+  name: string;
+  repo: string;
+  summary: string;
+  items: BoardItem[];
+}
+
+export interface ActivityEntry {
+  date: string;
+  text: string;
+}
+
+// ── Live data derived from git/gh (collectors/) ──────────────────
+
+export interface CommitInfo {
+  sha: string;
+  subject: string;
+  date: string; // committer date, ISO 8601
+}
+
+export interface RepoStatus {
+  name: string;
+  slug: string; // owner/name
+  currentBranch: string;
+  featureBranches: string[];
+  recentCommits: CommitInfo[];
+  /** Commits on develop not yet on main (unreleased work). */
+  developAheadOfMain: number;
+}
+
+/** Freshness of a data collector, surfaced so the UI can degrade gracefully. */
+export interface SourceHealth {
+  status: 'ok' | 'stale' | 'error';
+  at: string; // ISO of last successful (or attempted) collection
+  error?: string;
+}

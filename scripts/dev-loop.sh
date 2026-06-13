@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# AIVIS autonomous dev loop — run by launchd every hour (see install-launchd.sh).
+# AIVIS autonomous dev loop — run by the scheduler every DEV_LOOP_INTERVAL (default 20m).
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -33,6 +33,7 @@ claude -p "$(cat "$ROOT/scripts/dev-loop-prompt.md")" \
   --allowedTools "Read" "Glob" "Grep" "Edit" "Write" "TodoWrite" \
     "Bash(git:*)" "Bash(npm:*)" "Bash(npx:*)" "Bash(node:*)" \
     "Bash(curl:*)" "Bash(dotnet:*)" "Bash(ls:*)" "Bash(cat:*)" "Bash(sleep:*)" \
+    "mcp__claude_ai_PlayMCP" \
   --max-turns 100
 
 echo "── cycle done $(date '+%F %T') ──"

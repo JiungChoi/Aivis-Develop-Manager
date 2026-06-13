@@ -6,7 +6,7 @@ set -uo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 if [ -f "$ROOT/.env" ]; then set -a; . "$ROOT/.env"; set +a; fi
-INTERVAL="${DEV_LOOP_INTERVAL:-3600}"
+INTERVAL="${DEV_LOOP_INTERVAL:-1200}"
 
 echo "[scheduler] 기동 $(date '+%F %T') · interval=${INTERVAL}s · pid=$$"
 

@@ -13,10 +13,10 @@
    - 후보: REQUESTS.md의 대기 항목, 미완 로드맵, 명백한 버그/개선.
    - 사용자 자격증명·외부 결정이 필요한 일은 고르지 말 것(REQUESTS.md에 기록만).
    - 할 일이 없으면 `POST /api/info`로 "이번 주기는 제안할 작업 없음"을 보고하고 종료.
-3. **승인 요청 생성**: `curl -s -X POST http://localhost:4500/api/tasks -H 'Content-Type: application/json' -d '{"title":"...","detail":"무엇을/왜/예상 변경 파일"}'` → 응답의 `id` 기억.
+3. **승인 요청 생성**: `curl -s -X POST http://localhost:4500/api/tasks -H 'Content-Type: application/json' -d '{"title":"...","detail":"무엇을/왜/예상 변경 파일"}'` → 응답의 `id`와 **`approveUrl`/`declineUrl`** 기억(이 URL에는 보안 토큰이 이미 포함돼 있다).
    - 이 호출은 공룡 펫(SSE)에 즉시 말풍선을 띄운다.
 3-1. **카카오 알림 (PlayMCP)**: **REST 안 씀.** PlayMCP의 카카오 "나에게 보내기" 도구로 직접 발송한다.
-   - 본문 예: `🦖 다음 작업 진행할까요?\n<title>\n<detail>\n▶ 진행: <PUBLIC_URL>/api/tasks/<id>/approve\n■ 중단: <PUBLIC_URL>/api/tasks/<id>/decline`
+   - 본문 예: `🦖 다음 작업 진행할까요?\n<title>\n<detail>\n▶ 진행: <approveUrl>\n■ 중단: <declineUrl>` — 링크는 응답의 approveUrl/declineUrl을 **그대로**(토큰 포함) 쓴다. 손으로 만들지 말 것.
    - PlayMCP 발송 도구가 로드돼 있지 않으면 이 단계는 건너뛰고(공룡 펫으로만 알림) 그대로 진행.
 4. **제안 후 종료**: 제안을 만들었으면 **여기서 끝낸다.** 승인을 폴링하며 기다리지 않는다.
    - 사용자가 카톡 링크/공룡 펫 버튼으로 승인하면 → 매니저가 `run-task.sh`로 즉시 실행하거나, 다음 주기 0단계가 이어받는다.

@@ -1,8 +1,8 @@
 import express, { type Request, type Response } from 'express';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { PORT } from './config.js';
-import { approvals, type Decision } from './approvals.js';
+import { PORT, PUBLIC_URL, APPROVAL_TOKEN } from './config.js';
+import { approvals, type Decision, type Task } from './approvals.js';
 import { notifier } from './notifier.js';
 import { events } from './events.js';
 import { triggerExecution } from './runner.js';
@@ -18,6 +18,16 @@ app.use((_req: Request, res: Response, next) => {
   next();
 });
 
+// Attach token-bearing approve/decline links so clients never build their own.
+function withUrls(task: Task) {
+  const q = APPROVAL_TOKEN ? `?token=${encodeURIComponent(APPROVAL_TOKEN)}` : '';
+  return {
+    ...task,
+    approveUrl: `${PUBLIC_URL}/api/tasks/${task.id}/approve${q}`,
+    declineUrl: `${PUBLIC_URL}/api/tasks/${task.id}/decline${q}`,
+  };
+}
+
 // ── Static newsletter dashboard (public/) ───────────────────────
 const publicDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'public');
 app.use(express.static(publicDir));
@@ -28,7 +38,7 @@ app.get('/api/board', (_req: Request, res: Response) => {
     credentials,
     projects,
     activity,
-    approvals: approvals.list(),
+    approvals: approvals.list().map(withUrls),
     generatedAt: new Date().toISOString(),
   });
 });
@@ -48,13 +58,14 @@ app.post('/api/tasks', async (req: Request, res: Response) => {
     return;
   }
   const task = approvals.create(title, detail);
-  events.emit('task:proposed', task);
+  const enriched = withUrls(task);
+  events.emit('task:proposed', enriched);
   try {
     await notifier.proposeTask(task);
   } catch (err) {
     console.error('notify failed', err);
   }
-  res.json(task);
+  res.json(enriched);
 });
 
 // Dev process polls the decision.
@@ -86,6 +97,10 @@ app.post('/api/info', async (req: Request, res: Response) => {
 // Approve / decline via link (Kakao message) or the desktop pet.
 function decideViaLink(decision: Exclude<Decision, 'pending'>) {
   return (req: Request, res: Response) => {
+    if (APPROVAL_TOKEN && req.query.token !== APPROVAL_TOKEN) {
+      res.status(403).send('forbidden: invalid or missing token');
+      return;
+    }
     const task = approvals.resolve(req.params.id, decision);
     if (!task) {
       res.status(404).send('not found');

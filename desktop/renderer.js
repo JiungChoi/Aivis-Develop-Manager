@@ -62,11 +62,13 @@ const actionsEl = document.getElementById('actions');
 const statusEl = document.getElementById('status');
 let hideTimer = null;
 let currentTaskId = null;
+let currentUrls = null; // { approveUrl, declineUrl } from the manager (token-bearing)
 
-function speak(title, detail, { taskId = null, timeout = 20000 } = {}) {
+function speak(title, detail, { taskId = null, urls = null, timeout = 20000 } = {}) {
   titleEl.textContent = title;
   detailEl.textContent = detail ?? '';
   currentTaskId = taskId;
+  currentUrls = urls;
   actionsEl.classList.toggle('show', !!taskId);
   bubble.classList.add('show');
   clearTimeout(hideTimer);
@@ -77,14 +79,17 @@ document.getElementById('btn-approve').onclick = () => decide('approve');
 document.getElementById('btn-decline').onclick = () => decide('decline');
 
 async function decide(action) {
-  if (!currentTaskId) return;
+  if (!currentUrls) return;
+  // Use the manager-provided link (carries the approval token).
+  const url = action === 'approve' ? currentUrls.approveUrl : currentUrls.declineUrl;
   try {
-    await fetch(`${MANAGER_URL}/api/tasks/${currentTaskId}/${action}`);
+    await fetch(url);
     speak(action === 'approve' ? '좋아요, 진행할게요! 🦖' : '알겠어요, 중단할게요.', '');
   } catch {
     speak('앗, 매니저 응답이 없어요…', '');
   }
   currentTaskId = null;
+  currentUrls = null;
   actionsEl.classList.remove('show');
 }
 
@@ -113,7 +118,11 @@ function connect() {
 
   es.addEventListener('task:proposed', (e) => {
     const task = JSON.parse(e.data);
-    speak('🦖 새 작업 제안!', `${task.title}\n${task.detail ?? ''}`, { taskId: task.id, timeout: 0 });
+    speak('🦖 새 작업 제안!', `${task.title}\n${task.detail ?? ''}`, {
+      taskId: task.id,
+      urls: { approveUrl: task.approveUrl, declineUrl: task.declineUrl },
+      timeout: 0,
+    });
   });
 
   es.addEventListener('task:decided', (e) => {
@@ -141,6 +150,7 @@ async function checkPending() {
     if (pending) {
       speak('🦖 대기 중인 제안이 있어요!', `${pending.title}\n${pending.detail ?? ''}`, {
         taskId: pending.id,
+        urls: { approveUrl: pending.approveUrl, declineUrl: pending.declineUrl },
         timeout: 0,
       });
     }

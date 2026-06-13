@@ -9,15 +9,24 @@ import { events } from './events.js';
 import { triggerExecution } from './runner.js';
 import { credentials, projects, activity } from './board.js';
 import { collectGit } from './collectors/git.js';
+import { collectGithub } from './collectors/github.js';
 import { createCache } from './cache.js';
+import type { RepoStatus } from './types.js';
 
 // Local clones the dashboard reports on. Override the root with DEV_DIR if needed.
 const DEV_DIR = process.env.DEV_DIR ?? join(homedir(), 'development');
+
+// Merge local git state with GitHub PR/CI for one repo.
+async function collectRepo(name: string, slug: string, path: string): Promise<RepoStatus> {
+  const [git, gh] = await Promise.all([collectGit(name, slug, path), collectGithub(slug)]);
+  return { ...git, openPRs: gh.openPRs, ci: gh.ci };
+}
+
 const reposCache = createCache(
   () =>
     Promise.all([
-      collectGit('AIVIS', 'JiungChoi/Aivis', join(DEV_DIR, 'Aivis')),
-      collectGit('AIVIS Develop Manager', 'JiungChoi/Aivis-Develop-Manager', join(DEV_DIR, 'Aivis-Develop-Manager')),
+      collectRepo('AIVIS', 'JiungChoi/Aivis', join(DEV_DIR, 'Aivis')),
+      collectRepo('AIVIS Develop Manager', 'JiungChoi/Aivis-Develop-Manager', join(DEV_DIR, 'Aivis-Develop-Manager')),
     ]),
   60_000,
 );

@@ -35,6 +35,15 @@ export interface CommitInfo {
   date: string; // committer date, ISO 8601
 }
 
+export type CiStatus = 'passing' | 'failing' | 'pending' | 'none' | 'unknown';
+
+export interface PullRequest {
+  number: number;
+  title: string;
+  head: string; // head branch
+  ci: CiStatus;
+}
+
 export interface RepoStatus {
   name: string;
   slug: string; // owner/name
@@ -43,6 +52,8 @@ export interface RepoStatus {
   recentCommits: CommitInfo[];
   /** Commits on develop not yet on main (unreleased work). */
   developAheadOfMain: number;
+  openPRs: PullRequest[];
+  ci: CiStatus; // repo-level rollup across open PRs
 }
 
 /** Freshness of a data collector, surfaced so the UI can degrade gracefully. */

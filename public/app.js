@@ -12,6 +12,8 @@ const relTime = (iso) => {
   if (s < 86400) return `${Math.floor(s / 3600)}시간 전`;
   return `${Math.floor(s / 86400)}일 전`;
 };
+const CI_LABEL = { passing: '✓ CI 통과', failing: '✗ CI 실패', pending: '… CI 진행', none: '', unknown: '' };
+const ciBadge = (ci) => CI_LABEL[ci] ? `<span class="gb ci-${ci}">${CI_LABEL[ci]}</span>` : '';
 // Live git summary for a repo (from /api/board.repos), matched by slug.
 const gitStrip = (r) => !r ? '' : `
   <div class="git">
@@ -19,7 +21,12 @@ const gitStrip = (r) => !r ? '' : `
       <span class="gb">⎇ ${esc(r.currentBranch)}</span>
       ${r.developAheadOfMain ? `<span class="gb warn">develop +${r.developAheadOfMain} 미배포</span>` : ''}
       ${r.featureBranches.length ? `<span class="gb">feature ${r.featureBranches.length}개</span>` : ''}
+      ${ciBadge(r.ci)}
     </div>
+    ${(r.openPRs && r.openPRs.length) ? `<ul class="prs">
+      ${r.openPRs.map((p) =>
+        `<li><span class="prnum">#${p.number}</span> ${esc(p.title)} ${ciBadge(p.ci)}</li>`).join('')}
+    </ul>` : ''}
     <ul class="commits">
       ${r.recentCommits.slice(0, 4).map((c) =>
         `<li><code>${esc(c.sha)}</code> ${esc(c.subject)} <span class="ago">${esc(relTime(c.date))}</span></li>`).join('')}

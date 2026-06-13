@@ -29,6 +29,7 @@ claude -p "승인된 작업 1건을 실행한다. 작업 디렉터리는 ~/devel
   --allowedTools "Read" "Glob" "Grep" "Edit" "Write" "TodoWrite" \
     "Bash(git:*)" "Bash(npm:*)" "Bash(npx:*)" "Bash(node:*)" \
     "Bash(curl:*)" "Bash(dotnet:*)" "Bash(ls:*)" "Bash(cat:*)" \
+    "mcp__claude_ai_PlayMCP" \
   --max-turns 120
 
 echo "── run-task done $(date '+%F %T') ──"

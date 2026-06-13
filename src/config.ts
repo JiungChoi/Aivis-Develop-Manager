@@ -1,13 +1,9 @@
 // Runtime config from environment (see .env.example).
 export const PORT = Number(process.env.PORT ?? 4500);
 
-// Public base URL of this manager (used in approval links).
+// Public base URL of this manager (used in approval links shared by the loop).
 export const PUBLIC_URL = (process.env.PUBLIC_URL ?? `http://localhost:${PORT}`).replace(/\/+$/, '');
 
-// How the Node service itself notifies.
-//  - 'console' (default): 로그만. 실제 카카오 승인은 Claude가 PlayMCP로 보냄(권장 경로).
-//  - 'kakao': Node 서비스가 카카오 REST '나에게 보내기'로 직접 발송(스탠드얼론).
-export const NOTIFY_CHANNEL = (process.env.NOTIFY_CHANNEL ?? 'console') as 'console' | 'kakao';
-
-// Kakao "메시지 API - 나에게 보내기" (NOTIFY_CHANNEL=kakao 일 때만 사용)
-export const KAKAO_ACCESS_TOKEN = process.env.KAKAO_ACCESS_TOKEN ?? '';
+// Shared secret guarding approve/decline. When set (required for public tunnels),
+// approval links must carry ?token=<APPROVAL_TOKEN>; calls without it are rejected.
+export const APPROVAL_TOKEN = process.env.APPROVAL_TOKEN ?? '';

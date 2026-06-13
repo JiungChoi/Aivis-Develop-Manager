@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<style>
+  html, body {
+    margin: 0; padding: 0; background: transparent; overflow: hidden;
+    font-family: -apple-system, system-ui, sans-serif; user-select: none;
+  }
+  #stage { position: relative; width: 260px; height: 300px; }
+
+  /* Speech bubble */
+  #bubble {
+    position: absolute; top: 0; left: 8px; right: 8px;
+    background: #1c1c28; color: #f2f2f7; border: 2px solid #3a3a4e;
+    border-radius: 12px; padding: 10px 12px; font-size: 12.5px; line-height: 1.45;
+    box-shadow: 0 4px 14px rgba(0,0,0,.35);
+    opacity: 0; transition: opacity .25s; pointer-events: none;
+  }
+  #bubble.show { opacity: 1; pointer-events: auto; }
+  #bubble::after {
+    content: ''; position: absolute; bottom: -8px; left: 50%; margin-left: -8px;
+    border: 8px solid transparent; border-top-color: #3a3a4e; border-bottom: 0;
+  }
+  #bubble .title { font-weight: 700; margin-bottom: 4px; color: #8de08d; }
+  #bubble .detail { color: #b8b8c8; white-space: pre-wrap; word-break: break-all;
+    max-height: 110px; overflow-y: auto; }
+  #actions { margin-top: 8px; display: none; gap: 6px; }
+  #actions.show { display: flex; }
+  #actions button {
+    flex: 1; padding: 6px 0; border: 0; border-radius: 8px; font-size: 12px;
+    font-weight: 700; cursor: pointer; -webkit-app-region: no-drag;
+  }
+  #btn-approve { background: #2ea84f; color: #fff; }
+  #btn-decline { background: #555568; color: #ddd; }
+
+  /* Dino — draggable window handle */
+  #dino { position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%);
+    -webkit-app-region: drag; image-rendering: pixelated; }
+  #dino.offline { filter: grayscale(1) brightness(.7); }
+
+  #status {
+    position: absolute; bottom: 4px; width: 100%; text-align: center;
+    font-size: 10px; color: rgba(200,200,210,.65);
+    text-shadow: 0 1px 2px rgba(0,0,0,.6);
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="bubble">
+    <div class="title"></div>
+    <div class="detail"></div>
+    <div id="actions">
+      <button id="btn-approve">✅ 진행</button>
+      <button id="btn-decline">⛔ 중단</button>
+    </div>
+  </div>
+  <canvas id="dino" width="96" height="96"></canvas>
+  <div id="status">연결 중…</div>
+</div>
+<script src="renderer.js"></script>
+</body>
+</html>

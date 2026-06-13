@@ -5,6 +5,7 @@ import { PORT } from './config.js';
 import { approvals, type Decision } from './approvals.js';
 import { notifier } from './notifier.js';
 import { events } from './events.js';
+import { triggerExecution } from './runner.js';
 import { credentials, projects, activity } from './board.js';
 
 const app = express();
@@ -91,6 +92,7 @@ function decideViaLink(decision: Exclude<Decision, 'pending'>) {
       return;
     }
     events.emit('task:decided', task);
+    if (decision === 'approved') triggerExecution(task.id);
     const label = decision === 'approved' ? '진행' : '중단';
     res.send(`<!doctype html><meta charset="utf-8"><body style="font-family:system-ui;background:#0b0b12;color:#eee;text-align:center;padding-top:60px">
       <h2>✅ ${label} 처리됨</h2><p>${task.title}</p></body>`);
@@ -98,5 +100,16 @@ function decideViaLink(decision: Exclude<Decision, 'pending'>) {
 }
 app.get('/api/tasks/:id/approve', decideViaLink('approved'));
 app.get('/api/tasks/:id/decline', decideViaLink('declined'));
+
+// Dev loop marks an approved task as carried out (so it isn't picked up again).
+app.post('/api/tasks/:id/done', (req: Request, res: Response) => {
+  const task = approvals.markExecuted(req.params.id);
+  if (!task) {
+    res.status(404).json({ error: 'not found' });
+    return;
+  }
+  events.emit('task:decided', task);
+  res.json(task);
+});
 
 app.listen(PORT, () => console.log(`aivis-manager listening on :${PORT} (dashboard: ${'/'})`));

@@ -9,6 +9,9 @@ export interface Task {
   decision: Decision;
   createdAt: string;
   decidedAt?: string;
+  /** Set once the dev loop has actually carried out an approved task. */
+  executed?: boolean;
+  executedAt?: string;
 }
 
 // In-memory approval store. Swap for SQLite/Redis if persistence is needed.
@@ -31,6 +34,18 @@ export const approvals = {
       task.decidedAt = new Date().toISOString();
     }
     return task;
+  },
+  markExecuted(id: string): Task | undefined {
+    const task = tasks.get(id);
+    if (task) {
+      task.executed = true;
+      task.executedAt = new Date().toISOString();
+    }
+    return task;
+  },
+  /** Approved but not yet carried out — the next dev cycle should resume these. */
+  pendingExecution(): Task[] {
+    return [...tasks.values()].filter((t) => t.decision === 'approved' && !t.executed);
   },
   list(): Task[] {
     return [...tasks.values()];

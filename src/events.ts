@@ -4,7 +4,7 @@ import type { Request, Response } from 'express';
 const clients = new Map<number, Response>();
 let nextId = 1;
 
-export type EventType = 'task:proposed' | 'task:decided' | 'info';
+export type EventType = 'task:proposed' | 'task:decided' | 'info' | 'loop';
 
 export const events = {
   /** Express handler: keeps the connection open and streams events. */

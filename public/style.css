@@ -85,6 +85,16 @@ h2.section:first-child { margin-top: 4px; }
 .b-blocked { background: rgba(248,113,113,0.18); color: #fca5a5; }
 .b-cancelled { background: rgba(160,166,184,0.16); color: #b3b9c9; }
 
+/* Loop status pin */
+.looppin { padding: 16px 20px; }
+.lp-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.lp-state { font-weight: 700; font-size: 14.5px; }
+.lp-state.run { color: #4ade80; animation: pulse 1.6s ease-in-out infinite; }
+.lp-state.idle { color: var(--accent); }
+.lp-int { color: var(--muted); font-size: 12.5px; font-family: ui-monospace, monospace; }
+.lp-count { margin-top: 8px; font-family: var(--serif); font-size: 20px; color: #fff; }
+@media (prefers-reduced-motion: reduce) { .lp-state.run { animation: none; } }
+
 /* Stat tiles */
 .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 10px 0 28px; }
 .tile { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 18px 12px; text-align: center; }

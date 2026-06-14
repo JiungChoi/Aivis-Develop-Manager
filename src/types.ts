@@ -56,6 +56,15 @@ export interface RepoStatus {
   ci: CiStatus; // repo-level rollup across open PRs
 }
 
+/** Aggregate stats derived from the approval ledger. */
+export interface Stats {
+  throughput7d: number[]; // executed tasks per day, oldest → newest (length 7)
+  approvedTotal: number;
+  declinedTotal: number;
+  avgLeadTimeSec: number; // mean approve → execute duration
+  successRate: number; // executed / approved, 0..1
+}
+
 /** Freshness of a data collector, surfaced so the UI can degrade gracefully. */
 export interface SourceHealth {
   status: 'ok' | 'stale' | 'error';

@@ -85,6 +85,13 @@ h2.section:first-child { margin-top: 4px; }
 .b-blocked { background: rgba(248,113,113,0.18); color: #fca5a5; }
 .b-cancelled { background: rgba(160,166,184,0.16); color: #b3b9c9; }
 
+/* Stats card + sparkline */
+.statcard { padding: 16px 20px; }
+.sc-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.statcard .bign { font-family: var(--serif); font-size: 32px; font-weight: 700; line-height: 1; color: var(--accent); }
+.spark { width: 100%; height: 44px; margin-top: 10px; display: block; }
+.spark polyline { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+
 /* Loop status pin */
 .looppin { padding: 16px 20px; }
 .lp-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; }

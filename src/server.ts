@@ -73,6 +73,7 @@ app.get('/api/board', async (_req: Request, res: Response) => {
     approvals: approvals.list().map(withUrls),
     repos: repos.value ?? [],
     loop: loop.snapshot(),
+    stats: approvals.stats(),
     sources: {
       git: { status: repos.status, at: repos.at, error: repos.error },
       requests: { status: reqs.status, at: reqs.at, error: reqs.error },

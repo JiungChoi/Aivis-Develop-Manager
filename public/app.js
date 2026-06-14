@@ -76,6 +76,28 @@ const approveButtons = (t) => t.decision !== 'pending' ? '' : `
     <button class="btn no" data-url="${esc(relUrl(t.declineUrl))}">■ 중단</button>
   </div>`;
 
+// Dependency-free sparkline (SVG polyline) for a small int series.
+const sparkline = (data) => {
+  if (!data || data.length < 2) return '';
+  const w = 260, h = 44, max = Math.max(1, ...data), n = data.length;
+  const pts = data.map((v, i) => `${((i / (n - 1)) * w).toFixed(1)},${(h - (v / max) * (h - 4) - 2).toFixed(1)}`).join(' ');
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><polyline points="${pts}"/></svg>`;
+};
+function statsCard() {
+  const s = BOARD.stats;
+  if (!s) return '';
+  const total = s.throughput7d.reduce((a, b) => a + b, 0);
+  return `
+    <div class="card statcard">
+      <div class="sc-head">
+        <div><div class="name">최근 7일 처리량</div>
+          <div class="note">평균 리드타임 ${esc(fmtDur(s.avgLeadTimeSec) || '—')} · 승인후 성공률 ${Math.round(s.successRate * 100)}%</div></div>
+        <div class="bign">${total}</div>
+      </div>
+      ${sparkline(s.throughput7d)}
+    </div>`;
+}
+
 // Live loop status pin (state + countdown to next cycle).
 function loopPin() {
   const l = BOARD.loop;
@@ -121,6 +143,7 @@ const views = {
         <div class="tile"><div class="n">${count('waiting')}</div><div class="l">대기</div></div>
         <div class="tile"><div class="n">${pendingApprovals.length}</div><div class="l">승인 대기</div></div>
       </div>
+      ${statsCard()}
       <h2 class="section">⚠ 지금 내가 결정할 것</h2>
       <div class="card">${decide || '<div class="empty">결정 대기 중인 승인이 없습니다 🎉</div>'}</div>
       <h2 class="section">최근 진행</h2>

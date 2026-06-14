@@ -110,12 +110,40 @@ function render() {
   document.getElementById('view').innerHTML = view();
 }
 
+let sseLive = false;
+
+function genLine() {
+  if (!BOARD) return '—';
+  const t = new Date(BOARD.generatedAt).toLocaleString('ko-KR');
+  const live = sseLive
+    ? '<span class="live on">● LIVE</span>'
+    : '<span class="live off">○ 폴링</span>';
+  return `${esc(t)} · ${live}`;
+}
+function updateGenLine() {
+  const el = document.getElementById('genDate');
+  if (el) el.innerHTML = genLine();
+}
+
 async function load() {
   const res = await fetch('/api/board');
   BOARD = await res.json();
-  document.getElementById('genDate').textContent =
-    new Date(BOARD.generatedAt).toLocaleString('ko-KR') + ' · 15초마다 자동 새로고침';
+  updateGenLine();
   render();
+}
+
+// Subscribe to the manager's SSE stream so the board updates the instant the
+// loop proposes/decides/reports. Polling stays on as a backup if SSE drops.
+function connectSSE() {
+  try {
+    const es = new EventSource('/api/events');
+    es.onopen = () => { sseLive = true; updateGenLine(); };
+    es.onerror = () => { sseLive = false; updateGenLine(); }; // EventSource auto-reconnects
+    ['task:proposed', 'task:decided', 'info'].forEach((type) =>
+      es.addEventListener(type, () => { load().catch(() => {}); }));
+  } catch {
+    sseLive = false;
+  }
 }
 
 async function boot() {
@@ -125,8 +153,9 @@ async function boot() {
     document.getElementById('view').innerHTML = `<div class="empty">데이터를 불러오지 못했습니다.</div>`;
     return;
   }
-  // Keep the board live without a manual refresh.
-  setInterval(() => { load().catch(() => {}); }, 15000);
+  connectSSE();
+  // Backup refresh in case SSE is unavailable; SSE keeps it instant otherwise.
+  setInterval(() => { load().catch(() => {}); }, 30000);
 }
 
 window.addEventListener('hashchange', render);

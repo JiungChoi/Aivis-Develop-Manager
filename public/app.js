@@ -43,36 +43,94 @@ const itemRow = (it) => `
 
 let BOARD = null;
 
+// Pipeline stage derived from a task's decision/executed flags.
+const STAGE = {
+  pending:   { key: 'pending',   label: '승인대기', badge: 'waiting' },
+  running:   { key: 'running',   label: '승인됨',   badge: 'progress' },
+  completed: { key: 'completed', label: '완료',     badge: 'done' },
+  declined:  { key: 'declined',  label: '중단',     badge: 'cancelled' },
+};
+const stageOf = (t) =>
+  t.executed ? STAGE.completed
+  : t.decision === 'approved' ? STAGE.running
+  : t.decision === 'declined' ? STAGE.declined
+  : STAGE.pending;
+
+const fmtDur = (sec) => {
+  if (!sec || sec < 0) return '';
+  if (sec < 60) return `${Math.round(sec)}초`;
+  if (sec < 3600) return `${Math.round(sec / 60)}분`;
+  return `${(sec / 3600).toFixed(1)}시간`;
+};
+// 승인→실행완료 리드타임 (둘 다 있을 때만).
+const leadTime = (t) => (t.decidedAt && t.executedAt)
+  ? fmtDur((new Date(t.executedAt) - new Date(t.decidedAt)) / 1000) : '';
+
 const views = {
-  overview() {
+  mission() {
     const allItems = [...BOARD.credentials.items, ...BOARD.projects.flatMap((p) => p.items)];
     const count = (s) => allItems.filter((i) => i.status === s).length;
-    const pending = BOARD.approvals.filter((a) => a.decision === 'pending').length;
+    const pendingApprovals = BOARD.approvals.filter((a) => a.decision === 'pending');
+    const decide = pendingApprovals.map((t) => `
+      <div class="row">
+        <div class="body"><div class="name">${esc(t.title)}</div>${t.detail ? `<div class="note">${esc(t.detail)}</div>` : ''}</div>
+        ${badge('waiting')}
+      </div>`).join('');
     return `
-      <p class="lead">자율 개발이 백그라운드에서 진행 중입니다. 내가 결정하거나 입력해야 할 것과 지금까지의 진행 상황을 한눈에 정리했습니다.</p>
+      <p class="lead">자율 개발이 20분 주기로 돌며 작업을 제안합니다. 지금 상태와 내가 결정할 일을 한눈에.</p>
       <div class="tiles">
         <div class="tile"><div class="n">${count('done')}</div><div class="l">완료</div></div>
         <div class="tile"><div class="n">${count('progress')}</div><div class="l">진행중</div></div>
         <div class="tile"><div class="n">${count('waiting')}</div><div class="l">대기</div></div>
-        <div class="tile"><div class="n">${pending}</div><div class="l">승인 대기</div></div>
+        <div class="tile"><div class="n">${pendingApprovals.length}</div><div class="l">승인 대기</div></div>
       </div>
-      <h2 class="section">지금 내가 결정·입력할 것</h2>
-      <div class="card">
-        ${BOARD.credentials.items.filter((i) => i.status === 'waiting').map(itemRow).join('') || '<div class="empty">대기 중인 항목이 없습니다 🎉</div>'}
-      </div>
+      <h2 class="section">⚠ 지금 내가 결정할 것</h2>
+      <div class="card">${decide || '<div class="empty">결정 대기 중인 승인이 없습니다 🎉</div>'}</div>
       <h2 class="section">최근 진행</h2>
       <ul class="timeline">
         ${BOARD.activity.slice(0, 3).map((a) => `<li><div class="d">${esc(a.date)}</div><div class="t">${esc(a.text)}</div></li>`).join('')}
       </ul>`;
   },
-  requests() {
-    return `
-      <h2 class="section">${esc(BOARD.credentials.title)}</h2>
-      <div class="card">${BOARD.credentials.items.map(itemRow).join('')}</div>`;
+  pipeline() {
+    const items = BOARD.approvals;
+    const n = (key) => items.filter((t) => stageOf(t).key === key).length;
+    const counters = `
+      <div class="stages">
+        <div class="stage"><div class="n">${n('pending')}</div><div class="l">승인대기</div></div>
+        <div class="stage"><div class="n">${n('running')}</div><div class="l">승인됨</div></div>
+        <div class="stage"><div class="n">${n('completed')}</div><div class="l">완료</div></div>
+        <div class="stage"><div class="n">${n('declined')}</div><div class="l">중단</div></div>
+      </div>`;
+    if (!items.length) {
+      return `<h2 class="section">승인 파이프라인</h2>${counters}
+        <div class="empty">아직 승인 요청이 없습니다.<br/>자율 개발이 다음 작업을 제안하면 카카오톡으로 알림이 옵니다.</div>`;
+    }
+    // newest first
+    const sorted = [...items].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    return `<h2 class="section">승인 파이프라인</h2>${counters}` + sorted.map((t) => {
+      const s = stageOf(t);
+      const lt = leadTime(t);
+      const steps = [
+        t.createdAt && `제안 ${relTime(t.createdAt)}`,
+        t.decidedAt && `${t.decision === 'approved' ? '승인' : '중단'} ${relTime(t.decidedAt)}`,
+        t.executedAt && `실행완료 ${relTime(t.executedAt)}`,
+      ].filter(Boolean).join(' · ');
+      return `
+      <div class="card">
+        <div class="row">
+          <div class="body">
+            <div class="name">${esc(t.title)}</div>
+            ${t.detail ? `<div class="note">${esc(t.detail)}</div>` : ''}
+            <div class="note">${esc(steps)}${lt ? ` · 리드타임 ${esc(lt)}` : ''}</div>
+          </div>
+          ${badge(s.badge)}
+        </div>
+      </div>`;
+    }).join('');
   },
-  projects() {
+  dev() {
     const bySlug = Object.fromEntries((BOARD.repos || []).map((r) => [r.slug, r]));
-    return `<h2 class="section">프로젝트 현황</h2>` + BOARD.projects.map((p) => `
+    return `<h2 class="section">AIVIS 개발현황</h2>` + BOARD.projects.map((p) => `
       <div class="card">
         <div class="ttl">${esc(p.name)} <span class="repo">${esc(p.repo)}</span></div>
         <div class="sum">${esc(p.summary)}</div>
@@ -80,22 +138,19 @@ const views = {
         <div style="margin-top:10px">${p.items.map(itemRow).join('')}</div>
       </div>`).join('');
   },
-  activity() {
-    return `<h2 class="section">진행 로그</h2>
+  timeline() {
+    return `<h2 class="section">타임라인</h2>
       <ul class="timeline">
         ${BOARD.activity.map((a) => `<li><div class="d">${esc(a.date)}</div><div class="t">${esc(a.text)}</div></li>`).join('')}
       </ul>`;
   },
-  approvals() {
-    const items = BOARD.approvals;
-    if (!items.length) return `<h2 class="section">승인</h2><div class="empty">대기 중인 승인 요청이 없습니다.<br/>자율 개발이 다음 작업을 제안하면 카카오톡으로 알림이 옵니다.</div>`;
-    return `<h2 class="section">승인 요청</h2>` + items.map((t) => `
-      <div class="card">
-        <div class="row">
-          <div class="body"><div class="name">${esc(t.title)}</div>${t.detail ? `<div class="note">${esc(t.detail)}</div>` : ''}</div>
-          ${badge(t.decision === 'pending' ? 'waiting' : t.decision === 'approved' ? 'done' : 'cancelled')}
-        </div>
-      </div>`).join('');
+  actions() {
+    // Waiting/blocked first — those are the things I actually need to act on.
+    const order = { waiting: 0, blocked: 1, progress: 2, done: 3, cancelled: 4 };
+    const sorted = [...BOARD.credentials.items].sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9));
+    return `
+      <h2 class="section">${esc(BOARD.credentials.title)}</h2>
+      <div class="card">${sorted.map(itemRow).join('')}</div>`;
   },
 };
 
@@ -104,9 +159,9 @@ function setActive(tab) {
 }
 
 function render() {
-  const tab = (location.hash.replace('#/', '') || 'overview');
-  const view = views[tab] || views.overview;
-  setActive(views[tab] ? tab : 'overview');
+  const tab = (location.hash.replace('#/', '') || 'mission');
+  const view = views[tab] || views.mission;
+  setActive(views[tab] ? tab : 'mission');
   document.getElementById('view').innerHTML = view();
 }
 

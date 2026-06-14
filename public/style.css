@@ -83,6 +83,12 @@ h2.section:first-child { margin-top: 4px; }
 .tile .n { font-family: var(--serif); font-size: 34px; font-weight: 700; line-height: 1; }
 .tile .l { color: var(--muted); font-size: 13px; margin-top: 6px; }
 
+/* Pipeline stage counters */
+.stages { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 4px 0 22px; }
+.stage { background: var(--paper); border: 1px solid var(--line); border-radius: 12px; padding: 14px 8px; text-align: center; }
+.stage .n { font-family: var(--serif); font-size: 26px; font-weight: 700; line-height: 1; }
+.stage .l { color: var(--muted); font-size: 12px; margin-top: 5px; }
+
 /* Activity */
 .timeline { list-style: none; padding: 0; margin: 0; }
 .timeline li { padding: 14px 0 14px 22px; border-left: 2px solid var(--line); position: relative; }

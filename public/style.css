@@ -22,6 +22,11 @@ body {
 .kicker { font-size: 12px; letter-spacing: 0.3em; color: var(--accent); font-weight: 700; }
 .masthead h1 { font-family: var(--serif); font-weight: 700; font-size: 38px; margin: 12px 0 10px; letter-spacing: -0.01em; }
 .byline { color: var(--muted); font-size: 14px; }
+.live { font-weight: 700; font-size: 12px; }
+.live.on { color: #4ade80; animation: pulse 2s ease-in-out infinite; }
+.live.off { color: var(--muted); }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+@media (prefers-reduced-motion: reduce) { .live.on { animation: none; } }
 
 /* Tabs */
 .tabs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; padding: 16px 0; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: rgba(10,11,16,0.92); backdrop-filter: blur(12px); z-index: 5; }

@@ -8,6 +8,9 @@
 
 ## 절차 (반드시 순서대로)
 0. **밀린 승인 먼저 실행**: `curl -s http://localhost:4500/api/board` 에서 `decision=="approved" && executed!=true` 인 task가 있으면, **새 작업을 고르지 말고** 그 task를 5단계 방식으로 수행한 뒤 `POST /api/tasks/<id>/done` 으로 완료 표시하고 종료한다.
+0.5. **뉴스레터(하루 1회)**: `curl -s "http://localhost:4500/api/newsletter/should-send?period=daily"` 호출.
+   - 응답 `shouldSend==true` 면 → 응답의 `text`(≤200자)를 PlayMCP 카카오 "나에게 보내기"로 **그대로** 발송하고, `curl -s -X POST http://localhost:4500/api/newsletter/sent -H 'Content-Type: application/json' -d '{"period":"daily","digest":"<응답 digest>"}'` 로 발송 기록(중복방지). PlayMCP 미로드면 이 단계는 건너뛴다.
+   - `shouldSend==false` 면 아무것도 하지 말고 다음 단계로.
 1. **현황 파악**: `REQUESTS.md`, `Aivis/`와 `Aivis-Develop-Manager/`의 git 상태(브랜치·최근 커밋·열린 feature)를 읽는다.
 2. **작업 1건 선정**: 지금 가장 가치 있는 **작은 작업 하나**(1시간 이내 분량)를 고른다.
    - 후보: REQUESTS.md의 대기 항목, 미완 로드맵, 명백한 버그/개선.

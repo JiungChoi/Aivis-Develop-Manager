@@ -76,6 +76,31 @@ const approveButtons = (t) => t.decision !== 'pending' ? '' : `
     <button class="btn no" data-url="${esc(relUrl(t.declineUrl))}">■ 중단</button>
   </div>`;
 
+// Live loop status pin (state + countdown to next cycle).
+function loopPin() {
+  const l = BOARD.loop;
+  if (!l) return '';
+  const running = l.state === 'running';
+  return `
+    <div class="card looppin">
+      <div class="lp-head">
+        <span class="lp-state ${running ? 'run' : 'idle'}">${running ? '● 사이클 실행 중' : '● 대기 중'}</span>
+        <span class="lp-int">${Math.round(l.intervalSec / 60)}분 주기</span>
+      </div>
+      <div class="lp-count" id="loopCountdown">—</div>
+    </div>`;
+}
+function updateLoopCountdown() {
+  const el = document.getElementById('loopCountdown');
+  if (!el || !BOARD || !BOARD.loop) return;
+  const l = BOARD.loop;
+  if (l.state === 'running') { el.textContent = '작업 선정·제안 중…'; return; }
+  if (!l.nextCycleAt) { el.textContent = '대기 중'; return; }
+  const sec = Math.round((new Date(l.nextCycleAt) - Date.now()) / 1000);
+  if (sec <= 0) { el.textContent = '곧 다음 사이클…'; return; }
+  el.textContent = `다음 사이클까지 ${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+}
+
 const views = {
   mission() {
     const allItems = [...BOARD.credentials.items, ...BOARD.projects.flatMap((p) => p.items)];
@@ -88,7 +113,8 @@ const views = {
       </div>
       ${approveButtons(t)}`).join('');
     return `
-      <p class="lead">자율 개발이 20분 주기로 돌며 작업을 제안합니다. 지금 상태와 내가 결정할 일을 한눈에.</p>
+      <p class="lead">자율 개발이 백그라운드로 돌며 작업을 제안합니다. 지금 상태와 내가 결정할 일을 한눈에.</p>
+      ${loopPin()}
       <div class="tiles">
         <div class="tile"><div class="n">${count('done')}</div><div class="l">완료</div></div>
         <div class="tile"><div class="n">${count('progress')}</div><div class="l">진행중</div></div>
@@ -206,7 +232,7 @@ function connectSSE() {
     const es = new EventSource('/api/events');
     es.onopen = () => { sseLive = true; updateGenLine(); };
     es.onerror = () => { sseLive = false; updateGenLine(); }; // EventSource auto-reconnects
-    ['task:proposed', 'task:decided', 'info'].forEach((type) =>
+    ['task:proposed', 'task:decided', 'info', 'loop'].forEach((type) =>
       es.addEventListener(type, () => { load().catch(() => {}); }));
   } catch {
     sseLive = false;
@@ -231,6 +257,8 @@ async function boot() {
   });
   // Backup refresh in case SSE is unavailable; SSE keeps it instant otherwise.
   setInterval(() => { load().catch(() => {}); }, 30000);
+  // Tick the loop countdown once a second (cheap; only touches one element).
+  setInterval(updateLoopCountdown, 1000);
 }
 
 window.addEventListener('hashchange', render);

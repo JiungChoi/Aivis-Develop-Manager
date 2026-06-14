@@ -12,6 +12,7 @@ import { collectGit } from './collectors/git.js';
 import { collectGithub } from './collectors/github.js';
 import { parseRequests } from './collectors/requests.js';
 import { createCache } from './cache.js';
+import { loop } from './loop.js';
 import type { RepoStatus } from './types.js';
 
 // Local clones the dashboard reports on. Override the root with DEV_DIR if needed.
@@ -71,12 +72,26 @@ app.get('/api/board', async (_req: Request, res: Response) => {
     activity: liveActivity,
     approvals: approvals.list().map(withUrls),
     repos: repos.value ?? [],
+    loop: loop.snapshot(),
     sources: {
       git: { status: repos.status, at: repos.at, error: repos.error },
       requests: { status: reqs.status, at: reqs.at, error: reqs.error },
     },
     generatedAt: new Date().toISOString(),
   });
+});
+
+// Scheduler reports cycle start/end so the dashboard can show a live countdown.
+app.post('/api/loop/heartbeat', (req: Request, res: Response) => {
+  const phase = req.body?.phase;
+  if (phase !== 'start' && phase !== 'end') {
+    res.status(400).json({ error: "phase must be 'start' or 'end'" });
+    return;
+  }
+  loop.onPhase(phase);
+  const snap = loop.snapshot();
+  events.emit('loop', snap);
+  res.json(snap);
 });
 
 app.get('/health', (_req: Request, res: Response) => {

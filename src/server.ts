@@ -13,6 +13,7 @@ import { collectGithub } from './collectors/github.js';
 import { parseRequests } from './collectors/requests.js';
 import { createCache } from './cache.js';
 import { loop } from './loop.js';
+import { createNewsletter, composeText, type Period } from './newsletter.js';
 import type { RepoStatus } from './types.js';
 
 // Local clones the dashboard reports on. Override the root with DEV_DIR if needed.
@@ -35,6 +36,25 @@ const reposCache = createCache(
 
 // REQUESTS.md is the human-maintained board (one level above the manager repo).
 const requestsCache = createCache(() => parseRequests(join(DEV_DIR, 'REQUESTS.md')), 60_000);
+
+// Kakao newsletter digest. State file (sent records) lives in the repo's data/ (gitignored).
+const repoRoot = join(dirname(fileURLToPath(import.meta.url)), '..');
+const newsletter = createNewsletter(join(repoRoot, 'data', 'newsletter.json'));
+
+// Compose the current digest text from live board data.
+async function newsletterText(): Promise<string> {
+  const [repos, reqs] = await Promise.all([reposCache.get(), requestsCache.get()]);
+  const credItems = reqs.value?.credentials.length ? reqs.value.credentials : credentials.items;
+  const items = [...credItems, ...projects.flatMap((p) => p.items)];
+  const counts = {
+    done: items.filter((i) => i.status === 'done').length,
+    progress: items.filter((i) => i.status === 'progress').length,
+    pendingApprovals: approvals.list().filter((t) => t.decision === 'pending').length,
+  };
+  return composeText(repos.value ?? [], counts);
+}
+
+const asPeriod = (q: unknown): Period => (q === 'weekly' ? 'weekly' : 'daily');
 
 const app = express();
 app.use(express.json());
@@ -93,6 +113,30 @@ app.post('/api/loop/heartbeat', (req: Request, res: Response) => {
   const snap = loop.snapshot();
   events.emit('loop', snap);
   res.json(snap);
+});
+
+// ── Kakao newsletter (loop sends; manager composes + dedups) ────
+// Current digest text (≤200 chars) for the period.
+app.get('/api/newsletter', async (req: Request, res: Response) => {
+  const period = asPeriod(req.query.period);
+  res.json(newsletter.build(await newsletterText(), period));
+});
+
+// Loop asks before sending so we send at most once per window.
+app.get('/api/newsletter/should-send', async (req: Request, res: Response) => {
+  const period = asPeriod(req.query.period);
+  res.json(newsletter.shouldSend(period, await newsletterText()));
+});
+
+// Loop reports a successful Kakao send so we don't repeat within the window.
+app.post('/api/newsletter/sent', (req: Request, res: Response) => {
+  const period = asPeriod(req.body?.period);
+  const digest = req.body?.digest;
+  if (typeof digest !== 'string') {
+    res.status(400).json({ error: 'digest (string) required' });
+    return;
+  }
+  res.json(newsletter.recordSent(period, digest));
 });
 
 app.get('/health', (_req: Request, res: Response) => {

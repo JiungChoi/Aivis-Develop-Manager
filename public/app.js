@@ -66,6 +66,16 @@ const fmtDur = (sec) => {
 const leadTime = (t) => (t.decidedAt && t.executedAt)
   ? fmtDur((new Date(t.executedAt) - new Date(t.decidedAt)) / 1000) : '';
 
+// Use a same-origin relative path so approve works whether the dashboard is
+// opened on localhost or via the public tunnel. Token stays in the query string.
+const relUrl = (u) => { try { const x = new URL(u); return x.pathname + x.search; } catch { return u; } };
+// Inline 진행/중단 buttons, only while the task is still pending.
+const approveButtons = (t) => t.decision !== 'pending' ? '' : `
+  <div class="acts">
+    <button class="btn ok" data-url="${esc(relUrl(t.approveUrl))}">▶ 진행</button>
+    <button class="btn no" data-url="${esc(relUrl(t.declineUrl))}">■ 중단</button>
+  </div>`;
+
 const views = {
   mission() {
     const allItems = [...BOARD.credentials.items, ...BOARD.projects.flatMap((p) => p.items)];
@@ -75,7 +85,8 @@ const views = {
       <div class="row">
         <div class="body"><div class="name">${esc(t.title)}</div>${t.detail ? `<div class="note">${esc(t.detail)}</div>` : ''}</div>
         ${badge('waiting')}
-      </div>`).join('');
+      </div>
+      ${approveButtons(t)}`).join('');
     return `
       <p class="lead">자율 개발이 20분 주기로 돌며 작업을 제안합니다. 지금 상태와 내가 결정할 일을 한눈에.</p>
       <div class="tiles">
@@ -125,6 +136,7 @@ const views = {
           </div>
           ${badge(s.badge)}
         </div>
+        ${approveButtons(t)}
       </div>`;
     }).join('');
   },
@@ -209,6 +221,14 @@ async function boot() {
     return;
   }
   connectSSE();
+  // Delegated handler for inline 진행/중단 buttons (token-bearing URL in data-url).
+  document.getElementById('view').addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-url]');
+    if (!btn) return;
+    btn.disabled = true;
+    btn.textContent = '처리 중…';
+    fetch(btn.dataset.url).then(() => load()).catch(() => load());
+  });
   // Backup refresh in case SSE is unavailable; SSE keeps it instant otherwise.
   setInterval(() => { load().catch(() => {}); }, 30000);
 }

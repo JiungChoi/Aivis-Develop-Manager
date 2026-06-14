@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import type { Stats } from './types.js';
 
 export type Decision = 'pending' | 'approved' | 'declined';
 
@@ -49,5 +50,34 @@ export const approvals = {
   },
   list(): Task[] {
     return [...tasks.values()];
+  },
+  /** Aggregate ledger stats for the dashboard (throughput, lead time, success rate). */
+  stats(): Stats {
+    const all = [...tasks.values()];
+    const approved = all.filter((t) => t.decision === 'approved');
+    const declined = all.filter((t) => t.decision === 'declined');
+    const executed = all.filter((t) => t.executed && t.executedAt);
+
+    const DAY = 86_400_000;
+    const startOfToday = new Date().setHours(0, 0, 0, 0);
+    const throughput7d = new Array(7).fill(0);
+    for (const t of executed) {
+      const dayStart = new Date(t.executedAt!).setHours(0, 0, 0, 0);
+      const idx = 6 - Math.round((startOfToday - dayStart) / DAY);
+      if (idx >= 0 && idx < 7) throughput7d[idx]++;
+    }
+
+    const leads = executed
+      .filter((t) => t.decidedAt)
+      .map((t) => (Date.parse(t.executedAt!) - Date.parse(t.decidedAt!)) / 1000);
+    const avgLeadTimeSec = leads.length ? Math.round(leads.reduce((a, b) => a + b, 0) / leads.length) : 0;
+
+    return {
+      throughput7d,
+      approvedTotal: approved.length,
+      declinedTotal: declined.length,
+      avgLeadTimeSec,
+      successRate: approved.length ? executed.length / approved.length : 0,
+    };
   },
 };

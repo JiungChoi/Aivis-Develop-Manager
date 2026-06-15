@@ -216,7 +216,21 @@ const views = {
 };
 
 function setActive(tab) {
-  document.querySelectorAll('#tabs a').forEach((a) => a.classList.toggle('active', a.dataset.tab === tab));
+  document.querySelectorAll('#tabs a').forEach((a) => {
+    const on = a.dataset.tab === tab;
+    a.classList.toggle('active', on);
+    if (on) a.setAttribute('aria-current', 'page');
+    else a.removeAttribute('aria-current');
+  });
+}
+
+// Footer note: warn when a data source is stale/errored so numbers aren't trusted blindly.
+function updateSrcNote() {
+  const el = document.getElementById('srcNote');
+  if (!el || !BOARD) return;
+  const src = BOARD.sources || {};
+  const bad = Object.entries(src).filter(([, v]) => v && v.status !== 'ok').map(([k]) => k);
+  el.textContent = bad.length ? `일부 데이터 지연: ${bad.join(', ')}` : '실시간 데이터 동기화 중';
 }
 
 function render() {
@@ -245,6 +259,7 @@ async function load() {
   const res = await fetch('/api/board');
   BOARD = await res.json();
   updateGenLine();
+  updateSrcNote();
   render();
 }
 

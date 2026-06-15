@@ -1,4 +1,7 @@
 import { randomUUID } from 'node:crypto';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
 import type { Stats } from './types.js';
 
 export type Decision = 'pending' | 'approved' | 'declined';
@@ -15,14 +18,27 @@ export interface Task {
   executedAt?: string;
 }
 
-// In-memory approval store. Swap for SQLite/Redis if persistence is needed.
+// Approval ledger persisted to data/approvals.json so pending proposals (and the
+// Kakao approve links pointing at them) survive a manager restart/crash.
+const STATE = join(dirname(fileURLToPath(import.meta.url)), '..', 'data', 'approvals.json');
 const tasks = new Map<string, Task>();
+try {
+  for (const t of JSON.parse(readFileSync(STATE, 'utf8')) as Task[]) tasks.set(t.id, t);
+} catch { /* first run / no file */ }
+
+function persist(): void {
+  try {
+    mkdirSync(dirname(STATE), { recursive: true });
+    writeFileSync(STATE, JSON.stringify([...tasks.values()], null, 2));
+  } catch { /* best effort */ }
+}
 
 export const approvals = {
   create(title: string, detail?: string): Task {
     const id = randomUUID().slice(0, 8);
     const task: Task = { id, title, detail, decision: 'pending', createdAt: new Date().toISOString() };
     tasks.set(id, task);
+    persist();
     return task;
   },
   get(id: string): Task | undefined {
@@ -33,6 +49,7 @@ export const approvals = {
     if (task && task.decision === 'pending') {
       task.decision = decision;
       task.decidedAt = new Date().toISOString();
+      persist();
     }
     return task;
   },
@@ -41,6 +58,7 @@ export const approvals = {
     if (task) {
       task.executed = true;
       task.executedAt = new Date().toISOString();
+      persist();
     }
     return task;
   },

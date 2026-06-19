@@ -110,6 +110,7 @@ function loopPin() {
         <span class="lp-int">${Math.round(l.intervalSec / 60)}분 주기</span>
       </div>
       <div class="lp-count" id="loopCountdown">—</div>
+      ${l.lastCycleAt ? `<div class="lp-last">마지막 사이클: ${new Date(l.lastCycleAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })} (${esc(relTime(l.lastCycleAt))})</div>` : ''}
     </div>`;
 }
 function updateLoopCountdown() {

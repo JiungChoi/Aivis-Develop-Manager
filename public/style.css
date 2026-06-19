@@ -113,6 +113,7 @@ h2.section:first-child { margin-top: 4px; }
 .lp-state.idle { color: var(--accent); }
 .lp-int { color: var(--muted); font-size: 12.5px; font-family: ui-monospace, monospace; }
 .lp-count { margin-top: 8px; font-family: var(--serif); font-size: 20px; color: #fff; }
+.lp-last { margin-top: 6px; font-size: 12px; color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { .lp-state.run { animation: none; } }
 
 /* Stat tiles */

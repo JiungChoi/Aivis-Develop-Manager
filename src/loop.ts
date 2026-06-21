@@ -2,7 +2,7 @@
 // status pin + countdown to the next cycle. Fed by scheduler.sh via /api/loop/heartbeat.
 
 const INTERVAL_SEC = Number(process.env.DEV_LOOP_INTERVAL ?? 1200);
-const APPROVAL_TIMEOUT_SEC = Number(process.env.APPROVAL_TIMEOUT_SEC ?? 1800);
+const APPROVAL_TIMEOUT_SEC = Number(process.env.APPROVAL_TIMEOUT_SEC ?? 86400); // 24h — 천천히 결정해도 됨
 
 export type LoopState = 'idle' | 'running';
 
